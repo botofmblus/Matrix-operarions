@@ -1,0 +1,232 @@
+# 12/3/24
+# Program preforms operations plus, times, scalarTimesRow, switchRows, linearCombRows, rowreduce, and invert.
+# Went through multiple iterations of reduce and invert as many programmed approaches simply don't work.
+# each step / process is carefuly documented for hopes of clear explination, though some algorithms like inverse and rowreduce may be hard to follow.
+
+#HOW TO USE:    This is the main file, there should be a class file as well for use in your own program file. To use this particular program, label the rows and cols correctly, fill in the matrix(cies), and uncomment the desired function.
+
+
+
+class MatrixMaster:
+    # function that makes matrix
+    def __init__(self, rows, cols):
+        self.rows = rows
+        self.cols = cols
+        self.data = [[0 for _ in range(cols)] for _ in range(rows)]
+
+    # function that prints matrix
+    def print_matrix(self):
+        for i in range(self.rows):
+            for j in range(self.cols):
+                print(self.data[i][j], end=" ")
+            print()
+
+    # function that adds matrix
+    def plus(self, matrixtwo):
+        if self.rows == matrixtwo.rows:  # if the rows match
+            if self.cols == matrixtwo.cols:  # if the cols match
+                for i in range(self.rows):
+                    for j in range(self.cols):  # for each single space in the matrix
+                        self.data[i][j] = self.data[i][j] + matrixtwo.data[i][j]  # add the corresponding spots together
+            else:
+                print("Function not possible, operation skipped")
+        else:
+            print("Function not possible, operation skipped")
+
+    # function that multiplies matrix
+    def times(self, matrixtwo):  # this is a second, much easier to follow iteration of my times function.The old function was too case specific and not general enough.
+        if self.cols == matrixtwo.rows:  # if the cols of the first matrix  match the rows of the second matrix, it is multiplyable
+
+            result = [[0 for _ in range(matrixtwo.cols)] for _ in range(
+                self.rows)]  # copied same line of matrix generation.  (this is so that I can overrite the origional matrix indirectly.)
+            # print(result)
+            for j in range(self.rows):  # for each row in the origional matrix
+                for i in range(matrixtwo.cols):  # for each col in the other matrix
+                    for f in range(
+                            self.cols):  # for each col in the origional matrix.   these 3 loops will cause 3 iterations of the first matrix row for each column of the second matrix, then repeat for each
+                        # print(str(self.data[j][f]) + "")
+                        # print(str(matrixtwo.data[f][i]) + " matrix data")
+                        # print(f)
+                        result[j][i] += self.data[j][f] * matrixtwo.data[f][
+                            i]  # set the new result respective position equal to addition of the multiplied rows and cols. (1 row * the multiple cols in the second matrix)
+            self.data = result  # set result equal to the data
+            self.rows = len(result)  # required reformating for the print function
+            self.cols = len(result[0])  # required reformating for the print function
+        else:
+            print("Function not possible, operation skipped")
+
+    def scalarTimesRow(self, doubleScalar, rowNumber):
+        rowNumber -= 1  # row number (required to -= 1 for formatting)
+        if rowNumber < self.rows:  # if the row number selected doesnt exist in the matrix
+            for i in range(self.cols):  # For each row
+                self.data[rowNumber][i] = doubleScalar * (self.data[rowNumber][i])  # multiply the double scalar by the row
+        else:
+            print("Function not possible, operation skipped")
+
+    def switchRows(self, firstrow, secondrow):
+        firstrow -= 1
+        secondrow -= 1
+        rowplaceholder = self.data[firstrow]
+        self.data[firstrow] = self.data[secondrow]       #not much documentation needed here, fairly straight forward.
+        self.data[secondrow] = rowplaceholder
+
+    def linearCombRows(self, doubleScalar, firstrow, secondrow):
+        try:
+            firstrow -= 1
+            secondrow -= 1
+            rowplaceholder = self.data[firstrow][:]  # i found out by putting this colon on this line, it creates a copy of self.data instead of a reference so it doesnt affec tthe object.
+            for i in range(self.rows):
+                rowplaceholder[i] = doubleScalar * (rowplaceholder[i])          #row placeholder row times doubleScalar
+            for f in range(self.cols):
+                self.data[secondrow][f] = self.data[secondrow][f] + rowplaceholder[f]           #now add all the items.
+        except:
+            print("function not possible operation skipped")
+
+    def rowreduce(self):
+
+        #method:  same as inverse but instead of applying steps to an identity matrix, we apply them to a single collumn.
+
+        #lets get rid of that annoying last column so we can preform our operation like normal, but instead of applying it to an identity we apply it to a normal matrix.
+        last_column = [row[-1] for row in self.data]  #Extract the last element of each row
+        self.data = [row[:-1] for row in self.data]  #Exclude the last element of each row
+
+        cols = self.cols - 1  #Number of columns in the matrix (the -1 is becuase we just took out a col)
+        rows = self.rows  #Number of rows in the matrix.
+
+        if cols == rows:
+
+            # Row reduction starts here
+            for i in range(rows):  #Iterate through each row of the original matrix
+                diag = self.data[i][i]  #The diagonal element in the current row (this is important to avoid turning this item into a zero accidentally)
+
+                # If the diagonal is zero, attempt to swap rows.    If the diagonal was zero and we tried to "Normalize" it then we would be dividing by zero which is not good.
+                #Swapping ensures the algorithm can continue even with a diagonal zero.
+                #swapping rows doesn't affect the final answer the matrix equations stay the same, they are just reordered.
+                if diag == 0:
+                    for k in range(i + 1, rows):
+                        if self.data[k][i] != 0:
+                            #Swap rows in self.data
+                            self.data[i] = self.data[k]
+                            self.data[k] = self.data[i]
+                            #Swap corresponding elements in last_column
+                            last_column[i] = last_column[k]
+                            last_column[k] = last_column[i]
+                            diag = self.data[i][i]  #Update the diagonal value after swapping
+                            break
+
+                    if diag == 0:
+                        continue           #skip iteration
+
+                #Normalize or in my terms get the slant spot into a one so we can perform the rest of the operations with this row.
+                matrixrowplaceholder = []  #Placeholder for the changed or "normalized" row.
+                for p in self.data[i]:  #Iterate over each element in the current row  (algorithm does one row at a time)
+                    matrixrowplaceholder.append(p / diag)  #Divide by the slant to turn the diagonal spot into one.
+                self.data[i] = matrixrowplaceholder  #Replace the current row with its "normalized" version
+
+                #Do the exact same steps to the last column instead of the identity matrix.
+                last_column[i] = last_column[i] / diag
+
+                #Turn the rest of the items in the current row into zero.
+                for j in range(rows):  #Iterate through all rows of the matrix.
+                    if i != j:  #Only if we are not on the diagonal, then make it zero.
+                        multiplyfactor = self.data[j][i]  #The factor to eliminate the current item in the j-th row.
+
+                        #This piece results in a zero by multiplying with a common factor and then subtracting.
+                        self.data[j] = [self.data[j][k] - multiplyfactor * self.data[i][k] for k in range(len(self.data[j]))]
+
+                        # Apply the same function to the last column.
+                        last_column[j] = last_column[j] - multiplyfactor * last_column[i]
+
+
+
+        else:
+            print("invalid matrix dimensions, operation skipped")
+
+        #Reattach the last column to the matrix  so it gains its origional form.
+        self.data = [row + [last_column[f]] for f, row in enumerate(self.data)]
+        return self.data
+
+    def invert(self):
+
+        #Create the identity matrix
+        gavinoperationkiller = False
+        cols = self.cols  #Number of columns in the matrix.
+        rows = self.rows  #Number of rows in the matrix.
+
+        if rows == cols:
+
+            #make the identity matrix with the same dimensions as the original matrix and fill it up with zeros for now.
+            IdentityMatrix = [[0 for _ in range(cols)] for _ in range(rows)]
+
+            #place ones diagonally to make it an identity matrix.
+            for i in range(rows):
+                IdentityMatrix[i][i] = 1
+
+            #inverse function starts here
+            for i in range(rows):  # Iterate through each row of the orig matrix
+                diag = self.data[i][i]  #The diagonal element in the current row (this is important to avoid turning this item into a zero acccidentaly)
+
+                #If the diagonal is zero, the matrix cannot be inverted. this is becuase it cant be put into row ecchelon form
+                if diag == 0:
+                    print("Matrix cannot be inverted")  #Raise an error instead of printing.
+                    gavinoperationkiller = True                                                   #breaking once doesnt have the same effect as the gavin operation killer :)
+                    break
+
+                #"Normalize" or in my terms get the slant spot into a one so we can perform the rest of the operations with this row.
+                matrixrowplaceholder = []  #Placeholder for the changed or "normalized" row.
+                for p in self.data[i]:  #Iterate over each element in the current row.
+                    matrixrowplaceholder.append(p / diag)  #Divide by the slant to turn the diagonal spot(s) into one.
+                self.data[i] = matrixrowplaceholder  #Replace the current row with its "normalized" version
+
+                #Do the exact same steps to the identity matrix.
+                identitymatrixrowplaceholder = []
+                for p in IdentityMatrix[i]:
+                    identitymatrixrowplaceholder.append(p / diag)
+                IdentityMatrix[i] = identitymatrixrowplaceholder
+
+                # Turn the rest of the items in the current row into zero.
+                for j in range(rows):  # Iterate through all rows of the matrix.
+                    if i != j:  #only if we are not on the diagonal, then make it zero.
+                        multiplyfactor = self.data[j][i]  #The factor to eliminate the current item in the j-th row.
+
+                        #Adjust the j-th row by subtracting the factor times the i-th row. This results in a zero
+                        self.data[j] = [self.data[j][k] - multiplyfactor * self.data[i][k] for k in range(len(self.data[j]))]
+                        #apply the same function to the identity matrix.
+                        IdentityMatrix[j] = [IdentityMatrix[j][k] - multiplyfactor * IdentityMatrix[i][k] for k in range(len(IdentityMatrix[j]))]
+
+            if gavinoperationkiller != True:
+                self.data = IdentityMatrix  #Replace the original matrix with its inverse.
+        else:
+            print("matrix not square")
+        return self.data  #Return the inverted matrix.
+
+
+# Example usage
+if __name__ == "__main__":
+    matrixone = MatrixMaster(3, 4)
+    matrixtwo = MatrixMaster(2, 3)
+
+    matrixone.data = [
+        [2, 4, 6, 8],
+        [1, 3, 5, 7],
+        [3, 5, 7, 9]
+    ]
+
+    matrixtwo.data = [
+        [7, 8, 9],
+        [10, 11, 12]
+    ]
+
+
+    #CLASS CORNER   SELECT
+    #matrixone.times(matrixtwo)
+    #matrixone.scalarTimesRow(3, 2)   #ROW NUMBER (1 = first row)
+    #matrixone.plus(matrixtwo)
+    #matrixone.switchRows(1,3)
+    #matrixone.linearCombRows(2,1,3)
+    matrixone.rowreduce()
+    #matrixone.invert()
+    try:
+        matrixone.print_matrix()
+    except:
+        print("\ninvalid matrix dimensions print function stopped")
